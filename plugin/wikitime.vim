@@ -14,3 +14,4 @@ function! Foo()
         python3 wikitime.foo()
 endfunction
 
+command! -nargs=0 Foo call Foo()
