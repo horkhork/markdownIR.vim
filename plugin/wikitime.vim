@@ -11,6 +11,6 @@ import wikitime
 EOF
 
 function! Foo()
-        python3 Foo()
+        python3 wikitime.foo()
 endfunction
 
