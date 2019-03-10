@@ -13,5 +13,9 @@ EOF
 function! Foo()
         python3 wikitime.foo()
 endfunction
-
 command! -nargs=0 Foo call Foo()
+
+function! NewEntry()
+        python3 wikitime.NewEntry()
+endfunction
+command! -nargs=0 NewEntry call NewEntry()
