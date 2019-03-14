@@ -70,6 +70,7 @@ def NewEntry():
 def ShowIndex():
     # Query the Xapian DB and generate an Index page for navigation
     dbPath = vim.eval('g:wikitime_db')
+    root = vim.eval('g:wikitime_content_root')
 
     # Open the database we're going to search.
     db = xapian.Database(dbPath)
@@ -93,17 +94,21 @@ def ShowIndex():
     # Sort by date DESC
     enquire.set_sort_by_value_then_relevance(1, True)
 
+    index = join(vim.eval('s:plugin_root_dir'), "index.md")
+    vim.command(":new%s" % index)
+    vim.current.buffer[:] = None
+    vim.command(":only")
     for match in enquire.get_mset(0, 10000):
         fields = json.loads(match.document.get_data().decode('utf-8'))
-
-        print(u"%(rank)i: #%(docid)3.3i %(title)s %(date)s %(name)s %(tags)s" % {
-            'rank': match.rank + 1,
-            'docid': match.docid,
-            'title': fields.get('title', u''),
-            'date': fields.get('date', u'-'),
-            'name': fields.get('name', u'-'),
-            'tags': fields.get('tags', u'-'),
-            })
+        # print(u"%(rank)i: #%(docid)3.3i %(title)s %(date)s %(name)s %(tags)s" % {
+            # 'rank': match.rank + 1,
+            # 'docid': match.docid,
+            # 'title': fields.get('title', u''),
+            # 'date': fields.get('date', u'-'),
+            # 'name': fields.get('name', u'-'),
+            # 'tags': fields.get('tags', u'-'),
+            # })
+        vim.current.buffer.append('[%s](%s)\n' % (fields.get('title', u''), join(root, fields.get('name', u'-'))))
 
 def IndexData(fname=None):
     # Given the root directory, scan all the markdown files there and build an
