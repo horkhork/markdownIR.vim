@@ -19,14 +19,26 @@
 #    ...
 
 import datetime
+import dateutil.parser
+import json
 import os
+import subprocess
 import vim
+import xapian
+import yaml
+from os.path import normpath, join
 
 # Config parameters
 #  - Markdown root path
 #  - Filename template string ('%Y-%m-%d_%H:%M')
 #  - File suffix
 #  - 
+
+PANDOC = '/usr/bin/pandoc'
+PLUGIN_ROOT_DIR = vim.eval('s:plugin_root_dir')
+PYTHON_ROOT_DIR = normpath(join(PLUGIN_ROOT_DIR, '..', 'python'))
+METADATA_TMPL = join(PYTHON_ROOT_DIR, 'metadata_template.pandoc')
+BODY_TMPL = join(PYTHON_ROOT_DIR, 'body_template.pandoc')
 
 def foo():
     print("FOO BAR")
@@ -35,7 +47,7 @@ def NewEntry():
     # Create a new Markdown file prepopulated from a template
     suffix = vim.eval('g:wikitime_file_suffix')
     file_pattern = vim.eval('g:wikitime_file_pattern')
-    filepath = vim.eval('g:wikitime_root')
+    filepath = vim.eval('g:wikitime_content_root')
     author = vim.eval('g:wikitime_default_author')
 
     now = datetime.datetime.now().strftime(file_pattern)
@@ -43,7 +55,7 @@ def NewEntry():
 
     args = {
         "author": author,
-        "date": now,
+        "date": datetime.datetime.now().isoformat(),
         "name": filename,
     }
 
@@ -55,8 +67,135 @@ def NewEntry():
         vim.command(":%s/{{{key}}}/{val}/".format(key=k, val=v))
 
 
-def GenerateIndexListing():
+def ShowIndex():
+    # Query the Xapian DB and generate an Index page for navigation
+    dbPath = vim.eval('g:wikitime_db')
+
+    # Open the database we're going to search.
+    db = xapian.Database(dbPath)
+    
+    # Set up a QueryParser with a stemmer and suitable prefixes
+    queryparser = xapian.QueryParser()
+    queryparser.set_stemmer(xapian.Stem("en"))
+    queryparser.set_stemming_strategy(queryparser.STEM_SOME)
+
+    # Enable querying date ranges
+    queryparser.add_rangeprocessor(
+            xapian.DateRangeProcessor(1, xapian.RP_DATE_PREFER_MDY)
+    )
+
+    # Parse the query
+    query = xapian.Query.MatchAll
+
+    enquire = xapian.Enquire(db)
+    enquire.set_query(query)
+
+    # Sort by date DESC
+    enquire.set_sort_by_value_then_relevance(1, True)
+
+    for match in enquire.get_mset(0, 10000):
+        fields = json.loads(match.document.get_data().decode('utf-8'))
+
+        print(u"%(rank)i: #%(docid)3.3i %(title)s %(date)s %(name)s %(tags)s" % {
+            'rank': match.rank + 1,
+            'docid': match.docid,
+            'title': fields.get('title', u''),
+            'date': fields.get('date', u'-'),
+            'name': fields.get('name', u'-'),
+            'tags': fields.get('tags', u'-'),
+            })
+
+def IndexData(fname=None):
     # Given the root directory, scan all the markdown files there and build an
     # index page ordered by date DESC, listing each document title, with links
     # to each file
-    pass
+
+    dbPath = vim.eval('g:wikitime_db')
+
+    db = xapian.WritableDatabase(dbPath, xapian.DB_CREATE_OR_OPEN)
+    termgenerator = xapian.TermGenerator()
+    termgenerator.set_stemmer(xapian.Stem("en"))
+
+    if fname is not None:
+        index_md_file(fname, termgenerator)
+
+    else:
+        root = vim.eval('g:wikitime_content_root')
+        for fname in os.listdir(root):
+            try:
+                index_md_file(join(root, fname), termgenerator, db)
+            except Exception as e:
+                print("Exception processing %s: %s" % (fname, e))
+
+def index_md_file(fname, termgenerator, db):
+    cmd = [PANDOC, '--standalone', '--from', 'markdown+yaml_metadata_block', '--to',
+            'markdown+yaml_metadata_block', '--atx-headers', '--template',
+            METADATA_TMPL, fname]
+    mdata = subprocess.check_output(cmd)
+    metadata = yaml.load(mdata.strip().strip(b"---"))
+    
+    cmd = [PANDOC, '--standalone', '--from', 'markdown+yaml_metadata_block', '--to',
+            'markdown+yaml_metadata_block', '--atx-headers', '--template',
+            BODY_TMPL, fname]
+    body = subprocess.check_output(cmd)
+    
+    # Metadata fields
+    #author: steve
+    #category: programming
+    #cover:
+    #excerpt:
+    #date: '2019-02-23T00:00:00-05:00'
+    #name: 2019-03-11_20:41.md
+    #tags:
+    #- xapian
+    #- python
+    #title: Initial exploration into Xapian
+    #subtitle: Install Xapian and go through examples
+    
+    author = metadata.get("author", u"")
+    category = metadata.get("category", u"")
+    cover = metadata.get("cover", u"")
+    date = metadata.get("date", u"")
+    xdate = dateutil.parser.parse(date).strftime('%Y%m%d')
+    filename = metadata.get("name", u"")
+    tags = metadata.get("tags", u"")
+    title = metadata.get("title", u"")
+    subtitle = metadata.get("subtitle", u"")
+    
+    doc = xapian.Document()
+    termgenerator.set_document(doc)
+    
+    termgenerator.index_text(author, 1, 'A')
+    termgenerator.index_text(category, 1, 'B')
+    termgenerator.index_text(xdate, 1, 'D')
+    termgenerator.index_text(filename, 1, 'F')
+    termgenerator.index_text(title, 1, 'S')
+    termgenerator.index_text(subtitle, 1, 'XS')
+    
+    # Allow for sorting by date
+    doc.add_value(1, xdate)
+
+    # Index fields without prefixes for general search.
+    termgenerator.index_text(title)
+    termgenerator.increase_termpos()
+    termgenerator.index_text(subtitle)
+    termgenerator.increase_termpos()
+    termgenerator.index_text(category)
+    termgenerator.increase_termpos()
+    for tag in tags:
+        termgenerator.index_text(tag)
+        termgenerator.increase_termpos()
+    
+    termgenerator.index_text(body)
+    
+    for tag in tags:
+        doc.add_boolean_term('XT' + tag)
+
+    # Store all the fields for display purposes.
+    doc.set_data(json.dumps(metadata))
+    
+    # We use the identifier to ensure each object ends up in the database only
+    # once no matter how many times we run the indexer.
+    idterm = u"Q" + date
+    doc.add_boolean_term(idterm)
+    db.replace_document(idterm, doc)

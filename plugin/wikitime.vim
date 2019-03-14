@@ -19,3 +19,13 @@ function! NewEntry()
         python3 wikitime.NewEntry()
 endfunction
 command! -nargs=0 NewEntry call NewEntry()
+
+function! ShowIndex()
+        python3 wikitime.ShowIndex()
+endfunction
+command! -nargs=0 ShowIndex call ShowIndex()
+
+function! IndexData()
+        python3 wikitime.IndexData()
+endfunction
+command! -nargs=0 IndexData call IndexData()
