@@ -94,8 +94,11 @@ def ShowIndex():
     # Sort by date DESC
     enquire.set_sort_by_value_then_relevance(1, True)
 
-    index = join(vim.eval('s:plugin_root_dir'), "index.md")
-    vim.command(":new%s" % index)
+    vim.command(":new")
+    vim.command(":setlocal buftype=nofile")
+    vim.command(":setlocal filetype=markdown")
+    vim.command(":setlocal bufhidden=hide")
+    vim.command(":setlocal noswapfile")
     vim.current.buffer[:] = None
     vim.command(":only")
     for match in enquire.get_mset(0, 10000):
