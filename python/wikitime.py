@@ -26,12 +26,13 @@ import vim
 import xapian
 import yaml
 from os.path import normpath, join
+from collections import OrderedDict
 
 # Config parameters
 #  - Markdown root path
 #  - Filename template string ('%Y-%m-%d_%H:%M')
 #  - File suffix
-#  - 
+#  -
 
 PANDOC = '/usr/bin/pandoc'
 PLUGIN_ROOT_DIR = vim.eval('s:plugin_root_dir')
@@ -64,6 +65,26 @@ def NewEntry():
     for k, v in args.items():
         vim.command(":%s/{{{key}}}/{val}/".format(key=k, val=v))
 
+class ShowIndexEntry(object):
+    def __init__(self, date, rank, docid, title, fname, tags):
+        self.date = date
+        self.rank = rank
+        self.docid = docid
+        self.title = title
+        self.fname = fname
+        self.tags = tags
+
+    def __lt__(self, other):
+        return self.date < other.date
+
+    def __repr__(self):
+        return "[{} {:<10} {} {} {}]({})".format(
+            self.date.strftime("%d"),
+            self.date.strftime("%A"),
+            self.date.strftime("%H:%M"),
+            self.title,
+            ','.join(self.tags),
+            self.fname)
 
 def ShowIndex():
     # Query the Xapian DB and generate an Index page for navigation
@@ -72,7 +93,7 @@ def ShowIndex():
 
     # Open the database we're going to search.
     db = xapian.Database(dbPath)
-    
+
     # Set up a QueryParser with a stemmer and suitable prefixes
     queryparser = xapian.QueryParser()
     queryparser.set_stemmer(xapian.Stem("en"))
@@ -101,10 +122,46 @@ def ShowIndex():
     vim.command(":setlocal noswapfile")
     vim.current.buffer[:] = None
     vim.command(":only")
+
+    data = OrderedDict()
+
     for match in enquire.get_mset(0, 10000):
         fields = json.loads(match.document.get_data().decode('utf-8'))
-        vim.current.buffer.append('[%s](%s)\n' %
-                (fields.get('title', u''), join(root, fields.get('filename'))))
+
+        date = fields.get('date')
+        if date is None:
+            print("No date field in %s" % fields)
+        date = dateutil.parser.parse(date)
+        year = date.strftime("%Y")
+        month = date.strftime("%B")
+        daynum = date.strftime("%d")
+        day = date.strftime("%A")
+
+        if year not in data:
+            data[year] = OrderedDict()
+
+        if month not in data[year]:
+            data[year][month] = OrderedDict()
+
+        if daynum not in data[year][month]:
+            data[year][month][daynum] = list()
+
+        rank = match.rank + 1
+        docid = match.docid
+        title = fields.get('title', u'')
+        tags = fields.get('tags', u'')
+        filename = fields.get('filename')
+
+        entry = ShowIndexEntry(date, rank, docid, title, filename, tags)
+        data[year][month][daynum].append(entry)
+
+    for y in data:
+        vim.current.buffer.append(str(y))
+        for m in data[y]:
+            vim.current.buffer.append("  " + str(m))
+            for d in data[y][m]:
+                for i in sorted(data[y][m][d], reverse=True):
+                    vim.current.buffer.append("    " + str(i))
 
 def IndexData(fname=None):
     # Given the root directory, scan all the markdown files there and build an
@@ -134,12 +191,12 @@ def index_md_file(fname, termgenerator, db):
             METADATA_TMPL, fname]
     mdata = subprocess.check_output(cmd)
     metadata = yaml.load(mdata.strip().strip(b"---"))
-    
+
     cmd = [PANDOC, '--standalone', '--from', 'markdown+yaml_metadata_block', '--to',
             'markdown+yaml_metadata_block', '--atx-headers', '--template',
             BODY_TMPL, fname]
     body = subprocess.check_output(cmd)
-    
+
     # Metadata fields
     #author: steve
     #category: programming
@@ -151,7 +208,7 @@ def index_md_file(fname, termgenerator, db):
     #- python
     #title: Initial exploration into Xapian
     #subtitle: Install Xapian and go through examples
-    
+
     author = metadata.get("author", u"")
     category = metadata.get("category", u"")
     cover = metadata.get("cover", u"")
@@ -162,17 +219,17 @@ def index_md_file(fname, termgenerator, db):
     subtitle = metadata.get("subtitle", u"")
     # Explicitly set the filename as part of the indexed metadata
     metadata["filename"] = fname
-    
+
     doc = xapian.Document()
     termgenerator.set_document(doc)
-    
+
     termgenerator.index_text(author, 1, 'A')
     termgenerator.index_text(category, 1, 'B')
     termgenerator.index_text(xdate, 1, 'D')
     termgenerator.index_text(fname, 1, 'F')
     termgenerator.index_text(title, 1, 'S')
     termgenerator.index_text(subtitle, 1, 'XS')
-    
+
     # Allow for sorting by date
     doc.add_value(1, xdate)
 
@@ -186,15 +243,15 @@ def index_md_file(fname, termgenerator, db):
     for tag in tags:
         termgenerator.index_text(tag)
         termgenerator.increase_termpos()
-    
+
     termgenerator.index_text(body)
-    
+
     for tag in tags:
         doc.add_boolean_term('XT' + tag)
 
     # Store all the fields for display purposes.
     doc.set_data(json.dumps(metadata))
-    
+
     # We use the identifier to ensure each object ends up in the database only
     # once no matter how many times we run the indexer.
     idterm = u"Q" + date
