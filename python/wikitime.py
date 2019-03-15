@@ -12,7 +12,6 @@
 #    excerpt:
 #    cover:
 #    date: {date}
-#    name: {name}
 #    tags:
 #    title:
 #    subtitle:
@@ -56,7 +55,6 @@ def NewEntry():
     args = {
         "author": author,
         "date": datetime.datetime.now().isoformat(),
-        "name": filename,
     }
 
     # Open the new file according to filename template
@@ -79,6 +77,8 @@ def ShowIndex():
     queryparser = xapian.QueryParser()
     queryparser.set_stemmer(xapian.Stem("en"))
     queryparser.set_stemming_strategy(queryparser.STEM_SOME)
+
+    queryparser.add_prefix("filename", "F")
 
     # Enable querying date ranges
     queryparser.add_rangeprocessor(
@@ -103,15 +103,8 @@ def ShowIndex():
     vim.command(":only")
     for match in enquire.get_mset(0, 10000):
         fields = json.loads(match.document.get_data().decode('utf-8'))
-        # print(u"%(rank)i: #%(docid)3.3i %(title)s %(date)s %(name)s %(tags)s" % {
-            # 'rank': match.rank + 1,
-            # 'docid': match.docid,
-            # 'title': fields.get('title', u''),
-            # 'date': fields.get('date', u'-'),
-            # 'name': fields.get('name', u'-'),
-            # 'tags': fields.get('tags', u'-'),
-            # })
-        vim.current.buffer.append('[%s](%s)\n' % (fields.get('title', u''), join(root, fields.get('name', u'-'))))
+        vim.current.buffer.append('[%s](%s)\n' %
+                (fields.get('title', u''), join(root, fields.get('filename'))))
 
 def IndexData(fname=None):
     # Given the root directory, scan all the markdown files there and build an
@@ -153,7 +146,6 @@ def index_md_file(fname, termgenerator, db):
     #cover:
     #excerpt:
     #date: '2019-02-23T00:00:00-05:00'
-    #name: 2019-03-11_20:41.md
     #tags:
     #- xapian
     #- python
@@ -165,10 +157,11 @@ def index_md_file(fname, termgenerator, db):
     cover = metadata.get("cover", u"")
     date = metadata.get("date", u"")
     xdate = dateutil.parser.parse(date).strftime('%Y%m%d')
-    filename = metadata.get("name", u"")
     tags = metadata.get("tags", u"")
     title = metadata.get("title", u"")
     subtitle = metadata.get("subtitle", u"")
+    # Explicitly set the filename as part of the indexed metadata
+    metadata["filename"] = fname
     
     doc = xapian.Document()
     termgenerator.set_document(doc)
@@ -176,7 +169,7 @@ def index_md_file(fname, termgenerator, db):
     termgenerator.index_text(author, 1, 'A')
     termgenerator.index_text(category, 1, 'B')
     termgenerator.index_text(xdate, 1, 'D')
-    termgenerator.index_text(filename, 1, 'F')
+    termgenerator.index_text(fname, 1, 'F')
     termgenerator.index_text(title, 1, 'S')
     termgenerator.index_text(subtitle, 1, 'XS')
     
