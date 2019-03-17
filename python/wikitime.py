@@ -21,6 +21,7 @@ import datetime
 import dateutil.parser
 import json
 import os
+import re
 import subprocess
 import vim
 import xapian
@@ -36,9 +37,9 @@ from collections import OrderedDict
 
 PANDOC = '/usr/bin/pandoc'
 PLUGIN_ROOT_DIR = vim.eval('s:plugin_root_dir')
-PYTHON_ROOT_DIR = normpath(join(PLUGIN_ROOT_DIR, '..', 'python'))
-METADATA_TMPL = join(PYTHON_ROOT_DIR, 'metadata_template.pandoc')
-BODY_TMPL = join(PYTHON_ROOT_DIR, 'body_template.pandoc')
+TEMPLATE_DIR = normpath(join(PLUGIN_ROOT_DIR, '..', 'template'))
+METADATA_TMPL = join(TEMPLATE_DIR, 'metadata_template.pandoc')
+BODY_TMPL = join(TEMPLATE_DIR, 'body_template.pandoc')
 
 def foo():
     print("FOO BAR")
@@ -65,7 +66,7 @@ def NewEntry():
     for k, v in args.items():
         vim.command(":%s/{{{key}}}/{val}/".format(key=k, val=v))
 
-class ShowIndexEntry(object):
+class DisplayItem(object):
     def __init__(self, date, rank, docid, title, fname, tags):
         self.date = date
         self.rank = rank
@@ -86,7 +87,22 @@ class ShowIndexEntry(object):
             ','.join(self.tags),
             self.fname)
 
-def ShowIndex():
+def Search():
+    vim.command('call inputsave()')
+    vim.command("let query = input('Query string: ')")
+    vim.command('call inputrestore()')
+    query = vim.eval('query')
+    vim.command('call inputsave()')
+    vim.command("let tags = input('Tags: ')")
+    vim.command('call inputrestore()')
+    tags = vim.eval('tags')
+    Query(query, tags)
+
+def Query(queryStr=None, tags='', order_by_date=True):
+    tags = list(filter(None, re.split('[ ,]', tags)))
+
+    print("tags: ", tags)
+
     # Query the Xapian DB and generate an Index page for navigation
     dbPath = vim.eval('g:wikitime_db')
     root = vim.eval('g:wikitime_content_root')
@@ -103,17 +119,28 @@ def ShowIndex():
 
     # Enable querying date ranges
     queryparser.add_rangeprocessor(
-            xapian.DateRangeProcessor(1, xapian.RP_DATE_PREFER_MDY)
+            xapian.DateRangeProcessor(1,
+                xapian.RP_DATE_PREFER_MDY)
     )
 
     # Parse the query
     query = xapian.Query.MatchAll
+    if queryStr is not None:
+        query = queryparser.parse_query(queryStr)
+
+    if len(tags):
+        tags = ['XT{}'.format(t) for t in tags]
+        tag_query = xapian.Query(xapian.Query.OP_OR, tags)
+        query = xapian.Query(xapian.Query.OP_FILTER,
+                query,
+                tag_query)
 
     enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
-    # Sort by date DESC
-    enquire.set_sort_by_value_then_relevance(1, True)
+    if order_by_date:
+        # Sort by date DESC
+        enquire.set_sort_by_value_then_relevance(1, True)
 
     vim.command(":new")
     vim.command(":setlocal buftype=nofile")
@@ -152,7 +179,7 @@ def ShowIndex():
         tags = fields.get('tags', u'')
         filename = fields.get('filename')
 
-        entry = ShowIndexEntry(date, rank, docid, title, filename, tags)
+        entry = DisplayItem(date, rank, docid, title, filename, tags)
         data[year][month][daynum].append(entry)
 
     for y in data:
