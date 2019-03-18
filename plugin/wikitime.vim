@@ -30,10 +30,10 @@ function! Query()
 endfunction
 command! -nargs=0 ShowIndex call Query()
 
-function! Search()
-        python3 wikitime.Search()
+function! SearchByDate()
+        python3 wikitime.SearchByDate()
 endfunction
-command! -nargs=0 Search call Search()
+command! -nargs=0 SearchByDate call SearchByDate()
 
 function! SearchByRelevance()
         python3 wikitime.SearchByRelevance()

@@ -87,6 +87,25 @@ class DisplayItem(object):
             ','.join(self.tags),
             self.fname)
 
+class DisplayItemDetailedTime(object):
+    def __init__(self, date, rank, docid, title, fname, tags):
+        self.date = date
+        self.rank = rank
+        self.docid = docid
+        self.title = title
+        self.fname = fname
+        self.tags = tags
+
+    def __lt__(self, other):
+        return self.date < other.date
+
+    def __repr__(self):
+        return "[{} {} {}]({})".format(
+            self.date.strftime("%c"),
+            self.title,
+            ','.join(self.tags),
+            self.fname)
+
 def SearchByRelevance():
     _search(False)
 
@@ -146,10 +165,6 @@ def Query(queryStr='', tags='', order_by_date=True):
     enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
-    if order_by_date:
-        # Sort by date DESC
-        enquire.set_sort_by_value_then_relevance(1, True)
-
     vim.command(":new")
     vim.command(":setlocal buftype=nofile")
     vim.command(":setlocal filetype=markdown")
@@ -157,6 +172,16 @@ def Query(queryStr='', tags='', order_by_date=True):
     vim.command(":setlocal noswapfile")
     vim.current.buffer[:] = None
     vim.command(":only")
+
+    if order_by_date:
+        DisplayResultsByDate(enquire)
+
+    else:
+        DisplayResults(enquire)
+
+def DisplayResultsByDate(enquire):
+    # Sort by date DESC
+    enquire.set_sort_by_value_then_relevance(1, True)
 
     data = OrderedDict()
 
@@ -197,6 +222,24 @@ def Query(queryStr='', tags='', order_by_date=True):
             for d in data[y][m]:
                 for i in sorted(data[y][m][d], reverse=True):
                     vim.current.buffer.append("    " + str(i))
+
+def DisplayResults(enquire):
+    for match in enquire.get_mset(0, 10000):
+        fields = json.loads(match.document.get_data().decode('utf-8'))
+
+        date = fields.get('date')
+        if date is None:
+            print("No date field in %s" % fields)
+        date = dateutil.parser.parse(date)
+
+        rank = match.rank + 1
+        docid = match.docid
+        title = fields.get('title', u'')
+        tags = fields.get('tags', u'')
+        filename = fields.get('filename')
+
+        entry = DisplayItemDetailedTime(date, rank, docid, title, filename, tags)
+        vim.current.buffer.append(str(entry))
 
 def IndexData(fname=None):
     # Given the root directory, scan all the markdown files there and build an
