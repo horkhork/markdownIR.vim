@@ -113,7 +113,14 @@ def Query(queryStr='', tags='', order_by_date=True):
     queryparser.set_stemmer(xapian.Stem("en"))
     queryparser.set_stemming_strategy(queryparser.STEM_SOME)
 
-    queryparser.add_prefix("filename", "F")
+    # Start of prefix configuration.
+    queryparser.add_prefix("author", "A")
+    queryparser.add_prefix("category", "B")
+    queryparser.add_prefix("filename", "XF")
+    queryparser.add_prefix("description", "XD")
+    queryparser.add_prefix("title", "S")
+    queryparser.add_prefix("subtitle", "XS")
+    # End of prefix configuration.
 
     # Enable querying date ranges
     queryparser.add_rangeprocessor(
