@@ -25,10 +25,10 @@ function! IndexData()
 endfunction
 command! -nargs=0 IndexData call IndexData()
 
-function! Query()
+function! ShowIndex()
         python3 wikitime.Query()
 endfunction
-command! -nargs=0 ShowIndex call Query()
+command! -nargs=0 ShowIndex call ShowIndex()
 
 function! SearchByDate()
         python3 wikitime.SearchByDate()
