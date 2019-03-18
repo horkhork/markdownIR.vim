@@ -87,7 +87,13 @@ class DisplayItem(object):
             ','.join(self.tags),
             self.fname)
 
-def Search():
+def SearchByRelevance():
+    _search(False)
+
+def SearchByDate():
+    _search()
+
+def _search(order_by_date=True):
     vim.command('call inputsave()')
     vim.command("let query = input('Query string: ')")
     vim.command('call inputrestore()')
@@ -96,7 +102,7 @@ def Search():
     vim.command("let tags = input('Tags: ')")
     vim.command('call inputrestore()')
     tags = vim.eval('tags')
-    Query(query, tags)
+    Query(query, tags, order_by_date)
 
 def Query(queryStr='', tags='', order_by_date=True):
     tags = list(filter(None, re.split('[ ,]', tags)))

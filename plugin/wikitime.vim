@@ -34,3 +34,8 @@ function! Search()
         python3 wikitime.Search()
 endfunction
 command! -nargs=0 Search call Search()
+
+function! SearchByRelevance()
+        python3 wikitime.SearchByRelevance()
+endfunction
+command! -nargs=0 SearchByRelevance call SearchByRelevance()
