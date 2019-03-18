@@ -98,10 +98,8 @@ def Search():
     tags = vim.eval('tags')
     Query(query, tags)
 
-def Query(queryStr=None, tags='', order_by_date=True):
+def Query(queryStr='', tags='', order_by_date=True):
     tags = list(filter(None, re.split('[ ,]', tags)))
-
-    print("tags: ", tags)
 
     # Query the Xapian DB and generate an Index page for navigation
     dbPath = vim.eval('g:wikitime_db')
@@ -125,15 +123,12 @@ def Query(queryStr=None, tags='', order_by_date=True):
 
     # Parse the query
     query = xapian.Query.MatchAll
-    if queryStr is not None:
+    if queryStr:
         query = queryparser.parse_query(queryStr)
 
-    if len(tags):
-        tags = ['XT{}'.format(t) for t in tags]
-        tag_query = xapian.Query(xapian.Query.OP_OR, tags)
-        query = xapian.Query(xapian.Query.OP_FILTER,
-                query,
-                tag_query)
+    if tags:
+        tag_query = xapian.Query(xapian.Query.OP_OR, ['XT{}'.format(t) for t in tags])
+        query = xapian.Query(xapian.Query.OP_FILTER, query, tag_query)
 
     enquire = xapian.Enquire(db)
     enquire.set_query(query)
