@@ -41,9 +41,6 @@ TEMPLATE_DIR = normpath(join(PLUGIN_ROOT_DIR, '..', 'template'))
 METADATA_TMPL = join(TEMPLATE_DIR, 'metadata_template.pandoc')
 BODY_TMPL = join(TEMPLATE_DIR, 'body_template.pandoc')
 
-def foo():
-    print("FOO BAR")
-
 def NewEntry():
     # Create a new Markdown file prepopulated from a template
     suffix = vim.eval('g:wikitime_file_suffix')
