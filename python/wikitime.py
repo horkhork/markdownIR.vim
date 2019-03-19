@@ -255,6 +255,8 @@ def IndexData(fname=None):
     else:
         root = vim.eval('g:wikitime_content_root')
         for fname in os.listdir(root):
+            if not fname.endswith('.' + vim.eval('g:wikitime_file_suffix')):
+                continue
             try:
                 index_md_file(join(root, fname), termgenerator, db)
             except Exception as e:
