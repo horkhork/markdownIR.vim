@@ -22,6 +22,7 @@ import dateutil.parser
 import json
 import os
 import re
+import pytz
 import subprocess
 import vim
 import xapian
@@ -65,6 +66,8 @@ def NewEntry():
 
 class DisplayItem(object):
     def __init__(self, date, rank, docid, title, fname, tags):
+        if date.tzinfo is None:
+            date = pytz.utc.localize(date)
         self.date = date
         self.rank = rank
         self.docid = docid
@@ -76,16 +79,19 @@ class DisplayItem(object):
         return self.date < other.date
 
     def __repr__(self):
-        return "[{} {:<10} {} {} {}]({})".format(
+        ret = "[{} {:<10} {} {} {}]({})".format(
             self.date.strftime("%d"),
             self.date.strftime("%A"),
             self.date.strftime("%H:%M"),
             self.title,
             ','.join(self.tags),
             self.fname)
+        return ret.replace('\n', ' ')
 
 class DisplayItemDetailedTime(object):
     def __init__(self, date, rank, docid, title, fname, tags):
+        if date.tzinfo is None:
+            date = pytz.utc.localize(date)
         self.date = date
         self.rank = rank
         self.docid = docid
@@ -97,11 +103,12 @@ class DisplayItemDetailedTime(object):
         return self.date < other.date
 
     def __repr__(self):
-        return "[{} {} {}]({})".format(
+        ret = "[{} {} {}]({})".format(
             self.date.strftime("%c"),
             self.title,
             ','.join(self.tags),
             self.fname)
+        return ret.replace('\n', ' ')
 
 def SearchByRelevance():
     _search(False)
@@ -218,7 +225,10 @@ def DisplayResultsByDate(enquire):
             vim.current.buffer.append("  " + str(m))
             for d in data[y][m]:
                 for i in sorted(data[y][m][d], reverse=True):
-                    vim.current.buffer.append("    " + str(i))
+                    try:
+                        vim.current.buffer.append("    " + str(i))
+                    except:
+                        print("Exception handling %s", str(i))
 
 def DisplayResults(enquire):
     for match in enquire.get_mset(0, 10000):
