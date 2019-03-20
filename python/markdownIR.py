@@ -44,10 +44,10 @@ BODY_TMPL = join(TEMPLATE_DIR, 'body_template.pandoc')
 
 def NewEntry():
     # Create a new Markdown file prepopulated from a template
-    suffix = vim.eval('g:wikitime_file_suffix')
-    file_pattern = vim.eval('g:wikitime_file_pattern')
-    filepath = vim.eval('g:wikitime_content_root')
-    author = vim.eval('g:wikitime_default_author')
+    suffix = vim.eval('g:markdownIR_file_suffix')
+    file_pattern = vim.eval('g:markdownIR_file_pattern')
+    filepath = vim.eval('g:markdownIR_content_root')
+    author = vim.eval('g:markdownIR_default_author')
 
     now = datetime.datetime.now().strftime(file_pattern)
     filename = now + "." + suffix
@@ -131,8 +131,8 @@ def Query(queryStr='', tags='', order_by_date=True):
     tags = list(filter(None, re.split('[ ,]', tags)))
 
     # Query the Xapian DB and generate an Index page for navigation
-    dbPath = vim.eval('g:wikitime_db')
-    root = vim.eval('g:wikitime_content_root')
+    dbPath = vim.eval('g:markdownIR_db')
+    root = vim.eval('g:markdownIR_content_root')
 
     # Open the database we're going to search.
     db = xapian.Database(dbPath)
@@ -257,7 +257,7 @@ def IndexData(fname=None):
     # index page ordered by date DESC, listing each document title, with links
     # to each file
 
-    dbPath = vim.eval('g:wikitime_db')
+    dbPath = vim.eval('g:markdownIR_db')
 
     db = xapian.WritableDatabase(dbPath, xapian.DB_CREATE_OR_OPEN)
     termgenerator = xapian.TermGenerator()
@@ -267,9 +267,9 @@ def IndexData(fname=None):
         index_md_file(fname, termgenerator)
 
     else:
-        root = vim.eval('g:wikitime_content_root')
+        root = vim.eval('g:markdownIR_content_root')
         for fname in os.listdir(root):
-            if not fname.endswith('.' + vim.eval('g:wikitime_file_suffix')):
+            if not fname.endswith('.' + vim.eval('g:markdownIR_file_suffix')):
                 continue
             try:
                 index_md_file(join(root, fname), termgenerator, db)
