@@ -174,8 +174,12 @@ def Query(queryStr='', tags='', order_by_date=True):
     vim.command(":setlocal filetype=markdown")
     vim.command(":setlocal bufhidden=hide")
     vim.command(":setlocal noswapfile")
-    vim.current.buffer[:] = None
     vim.command(":only")
+
+    vim.current.buffer[:] = None
+    vim.current.buffer[0] = ('Query "{}" Tags "{}" OrderByDate: {}'.format(
+        queryStr, ','.join(tags), order_by_date))
+    vim.current.buffer.append('')
 
     if order_by_date:
         DisplayResultsByDate(enquire)
