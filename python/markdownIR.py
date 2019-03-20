@@ -89,18 +89,8 @@ class DisplayItem(object):
         return ret.replace('\n', ' ')
 
 class DisplayItemDetailedTime(object):
-    def __init__(self, date, rank, docid, title, fname, tags):
-        if date.tzinfo is None:
-            date = pytz.utc.localize(date)
-        self.date = date
-        self.rank = rank
-        self.docid = docid
-        self.title = title
-        self.fname = fname
-        self.tags = tags
-
-    def __lt__(self, other):
-        return self.date < other.date
+    def __init__(self, *args, **kwds):
+        super().__init(*args, **kwds)
 
     def __repr__(self):
         ret = "[{} {} {}]({})".format(
@@ -114,7 +104,48 @@ def SearchByRelevance():
     _search(False)
 
 def SearchByDate():
-    _search()
+    vim.command('call inputsave()')
+    vim.command("let query = input('Query string: ')")
+    vim.command('call inputrestore()')
+    query = vim.eval('query')
+    Query(queryStr=query, order_by_date=True)
+
+def SearchCatByDate():
+    vim.command('call inputsave()')
+    vim.command("let query = input('Query string: ')")
+    vim.command('call inputrestore()')
+    query = vim.eval('query')
+    vim.command('call inputsave()')
+    vim.command("let query = input('Category: ')")
+    vim.command('call inputrestore()')
+    category = vim.eval('query')
+    Query(queryStr=query, category=category, order_by_date=True)
+
+def SearchTagByDate():
+    vim.command('call inputsave()')
+    vim.command("let query = input('Query string: ')")
+    vim.command('call inputrestore()')
+    query = vim.eval('query')
+    vim.command('call inputsave()')
+    vim.command("let tags = input('Tags: ')")
+    vim.command('call inputrestore()')
+    tags = vim.eval('tags')
+    Query(queryStr=query, tags=tags, order_by_date=True)
+
+def SearchAllByDate():
+    vim.command('call inputsave()')
+    vim.command("let query = input('Query string: ')")
+    vim.command('call inputrestore()')
+    query = vim.eval('query')
+    vim.command('call inputsave()')
+    vim.command("let tags = input('Tags: ')")
+    vim.command('call inputrestore()')
+    tags = vim.eval('tags')
+    vim.command('call inputsave()')
+    vim.command("let query = input('Category: ')")
+    vim.command('call inputrestore()')
+    category = vim.eval('query')
+    Query(queryStr=query, tags=tags, category=category, order_by_date=True)
 
 def _search(order_by_date=True):
     vim.command('call inputsave()')
@@ -127,7 +158,7 @@ def _search(order_by_date=True):
     tags = vim.eval('tags')
     Query(query, tags, order_by_date)
 
-def Query(queryStr='', tags='', order_by_date=True):
+def Query(queryStr='', tags='', category='', order_by_date=True):
     tags = list(filter(None, re.split('[ ,]', tags)))
 
     # Query the Xapian DB and generate an Index page for navigation
@@ -166,6 +197,15 @@ def Query(queryStr='', tags='', order_by_date=True):
         tag_query = xapian.Query(xapian.Query.OP_OR, ['XT{}'.format(t) for t in tags])
         query = xapian.Query(xapian.Query.OP_FILTER, query, tag_query)
 
+    if category:
+        if category.startswith('-'):
+            # Negate the category
+            cat_query = xapian.Query(xapian.Query.OP_OR, ['B{}'.format(category[1:])])
+            query = xapian.Query(xapian.Query.OP_AND_NOT, query, cat_query)
+        else:
+            cat_query = xapian.Query(xapian.Query.OP_OR, ['B{}'.format(category)])
+            query = xapian.Query(xapian.Query.OP_FILTER, query, cat_query)
+
     enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
@@ -176,9 +216,20 @@ def Query(queryStr='', tags='', order_by_date=True):
     vim.command(":setlocal noswapfile")
     vim.command(":only")
 
+    header_line = '#'
+    if queryStr != '':
+        header_line += ' Query: {}'.format(queryStr)
+    if tags:
+        header_line += ' Tags: {}'.format(','.join(tags))
+    if category != '':
+        header_line += ' Category: {}'.format(category)
+    if order_by_date:
+        header_line += ' Ordered By Date'
+    else:
+        header_line += ' Ordered By Relevance'
+
     vim.current.buffer[:] = None
-    vim.current.buffer[0] = ('Query "{}" Tags "{}" OrderByDate: {}'.format(
-        queryStr, ','.join(tags), order_by_date))
+    vim.current.buffer[0] = (header_line)
     vim.current.buffer.append('')
 
     if order_by_date:
