@@ -88,9 +88,9 @@ class DisplayItem(object):
             self.fname)
         return ret.replace('\n', ' ')
 
-class DisplayItemDetailedTime(object):
+class DisplayItemDetailedTime(DisplayItem):
     def __init__(self, *args, **kwds):
-        super().__init(*args, **kwds)
+        super().__init__(*args, **kwds)
 
     def __repr__(self):
         ret = "[{} {} {}]({})".format(
