@@ -128,7 +128,6 @@ def Query(queryStr=None, order_by_date=True):
 
     # Start of prefix configuration.
     queryparser.add_prefix("author", "A")
-    queryparser.add_prefix("category", "B")
     queryparser.add_prefix("filename", "XF")
     queryparser.add_prefix("description", "XD")
     queryparser.add_prefix("title", "S")
@@ -275,7 +274,6 @@ def index_md_file(fname, termgenerator, db):
 
     # Metadata fields
     #author: steve
-    #category: programming
     #cover:
     #excerpt:
     #date: '2019-02-23T00:00:00-05:00'
@@ -286,11 +284,12 @@ def index_md_file(fname, termgenerator, db):
     #subtitle: Install Xapian and go through examples
 
     author = metadata.get("author", u"")
-    category = metadata.get("category", u"")
     cover = metadata.get("cover", u"")
     date = metadata.get("date", u"")
     xdate = dateutil.parser.parse(date).strftime('%Y%m%d')
     tags = metadata.get("tags", u"")
+    if not isinstance(tags, list):
+        tags = [tags]
     title = metadata.get("title", u"")
     subtitle = metadata.get("subtitle", u"")
     # Explicitly set the filename as part of the indexed metadata
@@ -300,7 +299,6 @@ def index_md_file(fname, termgenerator, db):
     termgenerator.set_document(doc)
 
     termgenerator.index_text(author, 1, 'A')
-    termgenerator.index_text(category, 1, 'B')
     termgenerator.index_text(xdate, 1, 'D')
     termgenerator.index_text(fname, 1, 'F')
     termgenerator.index_text(title, 1, 'S')
@@ -316,7 +314,6 @@ def index_md_file(fname, termgenerator, db):
     termgenerator.increase_termpos()
     termgenerator.index_text(subtitle)
     termgenerator.increase_termpos()
-    termgenerator.index_text(category)
     termgenerator.increase_termpos()
     for tag in tags:
         termgenerator.index_text(tag)
