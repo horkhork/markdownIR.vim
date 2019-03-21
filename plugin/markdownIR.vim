@@ -25,46 +25,14 @@ function! ShowIndex()
 endfunction
 command! -nargs=0 ShowIndex call ShowIndex()
 
-" Time-sorted Search variants
-
+" Time-sorted Search
 function! SearchByDate()
         python3 markdownIR.SearchByDate()
 endfunction
 command! -nargs=0 SearchByDate call SearchByDate()
 
-function! SearchCatByDate()
-        python3 markdownIR.SearchCatByDate()
-endfunction
-command! -nargs=0 SearchCatByDate call SearchCatByDate()
-
-function! SearchTagByDate()
-        python3 markdownIR.SearchTagByDate()
-endfunction
-command! -nargs=0 SearchTagByDate call SearchTagByDate()
-
-function! SearchAllByDate()
-        python3 markdownIR.SearchAllByDate()
-endfunction
-command! -nargs=0 SearchAllByDate call SearchAllByDate()
-
-" Relevance-sorted Search variants
-
+" Relevance-sorted Search
 function! SearchByRelevance()
         python3 markdownIR.SearchByRelevance()
 endfunction
 command! -nargs=0 SearchByRelevance call SearchByRelevance()
-
-function! SearchCatByRelevance()
-        python3 markdownIR.SearchCatByRelevance()
-endfunction
-command! -nargs=0 SearchCatByRelevance call SearchCatByRelevance()
-
-function! SearchTagByRelevance()
-        python3 markdownIR.SearchTagByRelevance()
-endfunction
-command! -nargs=0 SearchTagByRelevance call SearchTagByRelevance()
-
-function! SearchAllByRelevance()
-        python3 markdownIR.SearchAllByRelevance()
-endfunction
-command! -nargs=0 SearchAllByRelevance call SearchAllByRelevance()

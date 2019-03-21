@@ -104,63 +104,16 @@ def SearchByRelevance():
     _search(False)
 
 def SearchByDate():
-    vim.command('call inputsave()')
-    vim.command("let query = input('Query string: ')")
-    vim.command('call inputrestore()')
-    query = vim.eval('query')
-    Query(queryStr=query, order_by_date=True)
-
-def SearchCatByDate():
-    vim.command('call inputsave()')
-    vim.command("let query = input('Query string: ')")
-    vim.command('call inputrestore()')
-    query = vim.eval('query')
-    vim.command('call inputsave()')
-    vim.command("let query = input('Category: ')")
-    vim.command('call inputrestore()')
-    category = vim.eval('query')
-    Query(queryStr=query, category=category, order_by_date=True)
-
-def SearchTagByDate():
-    vim.command('call inputsave()')
-    vim.command("let query = input('Query string: ')")
-    vim.command('call inputrestore()')
-    query = vim.eval('query')
-    vim.command('call inputsave()')
-    vim.command("let tags = input('Tags: ')")
-    vim.command('call inputrestore()')
-    tags = vim.eval('tags')
-    Query(queryStr=query, tags=tags, order_by_date=True)
-
-def SearchAllByDate():
-    vim.command('call inputsave()')
-    vim.command("let query = input('Query string: ')")
-    vim.command('call inputrestore()')
-    query = vim.eval('query')
-    vim.command('call inputsave()')
-    vim.command("let tags = input('Tags: ')")
-    vim.command('call inputrestore()')
-    tags = vim.eval('tags')
-    vim.command('call inputsave()')
-    vim.command("let query = input('Category: ')")
-    vim.command('call inputrestore()')
-    category = vim.eval('query')
-    Query(queryStr=query, tags=tags, category=category, order_by_date=True)
+    _search(True)
 
 def _search(order_by_date=True):
     vim.command('call inputsave()')
     vim.command("let query = input('Query string: ')")
     vim.command('call inputrestore()')
     query = vim.eval('query')
-    vim.command('call inputsave()')
-    vim.command("let tags = input('Tags: ')")
-    vim.command('call inputrestore()')
-    tags = vim.eval('tags')
-    Query(query, tags, order_by_date)
+    Query(query, order_by_date)
 
-def Query(queryStr='', tags='', category='', order_by_date=True):
-    tags = list(filter(None, re.split('[ ,]', tags)))
-
+def Query(queryStr=None, order_by_date=True):
     # Query the Xapian DB and generate an Index page for navigation
     dbPath = vim.eval('g:markdownIR_db')
     root = vim.eval('g:markdownIR_content_root')
@@ -180,31 +133,16 @@ def Query(queryStr='', tags='', category='', order_by_date=True):
     queryparser.add_prefix("description", "XD")
     queryparser.add_prefix("title", "S")
     queryparser.add_prefix("subtitle", "XS")
+    queryparser.add_prefix("tag", "K")
     # End of prefix configuration.
 
     # Enable querying date ranges
-    queryparser.add_rangeprocessor(
-            xapian.DateRangeProcessor(1,
-                xapian.RP_DATE_PREFER_MDY)
-    )
+    queryparser.add_rangeprocessor(xapian.DateRangeProcessor(1, xapian.RP_DATE_PREFER_MDY))
 
     # Parse the query
     query = xapian.Query.MatchAll
-    if queryStr:
+    if queryStr is not None:
         query = queryparser.parse_query(queryStr)
-
-    if tags:
-        tag_query = xapian.Query(xapian.Query.OP_OR, ['XT{}'.format(t) for t in tags])
-        query = xapian.Query(xapian.Query.OP_FILTER, query, tag_query)
-
-    if category:
-        if category.startswith('-'):
-            # Negate the category
-            cat_query = xapian.Query(xapian.Query.OP_OR, ['B{}'.format(category[1:])])
-            query = xapian.Query(xapian.Query.OP_AND_NOT, query, cat_query)
-        else:
-            cat_query = xapian.Query(xapian.Query.OP_OR, ['B{}'.format(category)])
-            query = xapian.Query(xapian.Query.OP_FILTER, query, cat_query)
 
     enquire = xapian.Enquire(db)
     enquire.set_query(query)
@@ -219,10 +157,6 @@ def Query(queryStr='', tags='', category='', order_by_date=True):
     header_line = '#'
     if queryStr != '':
         header_line += ' Query: {}'.format(queryStr)
-    if tags:
-        header_line += ' Tags: {}'.format(','.join(tags))
-    if category != '':
-        header_line += ' Category: {}'.format(category)
     if order_by_date:
         header_line += ' Ordered By Date'
     else:
@@ -371,6 +305,8 @@ def index_md_file(fname, termgenerator, db):
     termgenerator.index_text(fname, 1, 'F')
     termgenerator.index_text(title, 1, 'S')
     termgenerator.index_text(subtitle, 1, 'XS')
+    for tag in tags:
+        termgenerator.index_text(tag, 1, 'K')
 
     # Allow for sorting by date
     doc.add_value(1, xdate)
@@ -387,9 +323,6 @@ def index_md_file(fname, termgenerator, db):
         termgenerator.increase_termpos()
 
     termgenerator.index_text(body)
-
-    for tag in tags:
-        doc.add_boolean_term('XT' + tag)
 
     # Store all the fields for display purposes.
     doc.set_data(json.dumps(metadata))
