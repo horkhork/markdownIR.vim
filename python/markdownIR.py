@@ -202,6 +202,8 @@ def DisplayResultsByDate(enquire):
         docid = match.docid
         title = fields.get('title', u'')
         tags = fields.get('tags', u'')
+        if not isinstance(tags, (list, tuple)):
+            tags = [tags]
         filename = fields.get('filename')
 
         entry = DisplayItem(date, rank, docid, title, filename, tags)
@@ -231,6 +233,8 @@ def DisplayResults(enquire):
         docid = match.docid
         title = fields.get('title', u'')
         tags = fields.get('tags', u'')
+        if not isinstance(tags, (list, tuple)):
+            tags = [tags]
         filename = fields.get('filename')
 
         entry = DisplayItemDetailedTime(date, rank, docid, title, filename, tags)
@@ -288,7 +292,7 @@ def index_md_file(fname, termgenerator, db):
     date = metadata.get("date", u"")
     xdate = dateutil.parser.parse(date).strftime('%Y%m%d')
     tags = metadata.get("tags", u"")
-    if not isinstance(tags, list):
+    if not isinstance(tags, (list, tuple)):
         tags = [tags]
     title = metadata.get("title", u"")
     subtitle = metadata.get("subtitle", u"")
