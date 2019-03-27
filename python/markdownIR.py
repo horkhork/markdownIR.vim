@@ -177,7 +177,9 @@ def DisplayResultsByDate(enquire):
 
     data = OrderedDict()
 
-    for match in enquire.get_mset(0, 10000):
+    count = 0
+    for match in enquire.get_mset(0, 100000):
+        count += 1
         fields = json.loads(match.document.get_data().decode('utf-8'))
 
         date = fields.get('date')
@@ -220,8 +222,13 @@ def DisplayResultsByDate(enquire):
                     except:
                         print("Exception handling %s", str(i))
 
+    vim.current.buffer.append("")
+    vim.current.buffer.append("Found {} matches".format(count))
+
 def DisplayResults(enquire):
-    for match in enquire.get_mset(0, 10000):
+    count = 0
+    for match in enquire.get_mset(0, 100000):
+        count += 1
         fields = json.loads(match.document.get_data().decode('utf-8'))
 
         date = fields.get('date')
@@ -239,6 +246,9 @@ def DisplayResults(enquire):
 
         entry = DisplayItemDetailedTime(date, rank, docid, title, filename, tags)
         vim.current.buffer.append(str(entry))
+
+    vim.current.buffer.append("")
+    vim.current.buffer.append("Found {} matches".format(count))
 
 def IndexData(fname=None):
     # Given the root directory, scan all the markdown files there and build an
