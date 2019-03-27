@@ -147,7 +147,10 @@ def Query(queryStr=None, order_by_date=True):
     enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
+    #vim.command(":setlocal splitright")
     vim.command(":new")
+    #vim.command(":vnew")
+    #vim.command(":30vnew  MarkdownIndex")
     vim.command(":setlocal noswapfile")
     vim.command(":setlocal buftype=nofile")
     vim.command(":setlocal nobuflisted")
@@ -217,11 +220,13 @@ def DisplayResultsByDate(enquire):
     for y in data:
         vim.current.buffer.append(str(y))
         for m in data[y]:
-            vim.current.buffer.append("  " + str(m))
+            #vim.current.buffer.append("  " + str(m))
+            vim.current.buffer.append(str(m))
             for d in data[y][m]:
                 for i in sorted(data[y][m][d], reverse=True):
                     try:
-                        vim.current.buffer.append("    " + str(i))
+                        #vim.current.buffer.append("    " + str(i))
+                        vim.current.buffer.append(str(i))
                     except:
                         print("Exception handling %s", str(i))
 
