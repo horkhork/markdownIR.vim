@@ -19,6 +19,7 @@
 
 import datetime
 import dateutil.parser
+import glob
 import json
 import os
 import re
@@ -43,22 +44,23 @@ METADATA_TMPL = join(TEMPLATE_DIR, 'metadata_template.pandoc')
 BODY_TMPL = join(TEMPLATE_DIR, 'body_template.pandoc')
 
 def NewEntry():
-    # Create a new Markdown file prepopulated from a template
-    suffix = vim.eval('g:markdownIR_file_suffix')
-    file_pattern = vim.eval('g:markdownIR_file_pattern')
-    filepath = vim.eval('g:markdownIR_content_root')
-    author = vim.eval('g:markdownIR_default_author')
+    ''' Create a new Markdown file prepopulated from a template '''
 
-    now = datetime.datetime.now().strftime(file_pattern)
-    filename = now + "." + suffix
+    timezone = pytz.timezone(vim.eval('g:markdownIR_timezone'))
+    now = timezone.localize(datetime.datetime.now())
+    nowStr = now.strftime(vim.eval('g:markdownIR_file_pattern'))
+
+    filename = "index" + "." + vim.eval('g:markdownIR_file_suffix')
+    filepath = os.path.join(vim.eval('g:markdownIR_content_root'), nowStr, filename)
+    os.mkdir(os.path.dirname(filepath))
 
     args = {
-        "author": author,
-        "date": datetime.datetime.now().isoformat(),
+        "author": vim.eval('g:markdownIR_default_author'),
+        "date": nowStr,
     }
 
     # Open the new file according to filename template
-    vim.command(":edit {}".format(os.path.join(filepath, filename)))
+    vim.command(":edit {}".format(filepath))
 
     # Substitute parameters into the template
     for k, v in args.items():
@@ -116,7 +118,6 @@ def _search(order_by_date=True):
 def Query(queryStr=None, order_by_date=True):
     # Query the Xapian DB and generate an Index page for navigation
     dbPath = vim.eval('g:markdownIR_db')
-    root = vim.eval('g:markdownIR_content_root')
 
     # Open the database we're going to search.
     db = xapian.Database(dbPath)
@@ -147,10 +148,12 @@ def Query(queryStr=None, order_by_date=True):
     enquire.set_query(query)
 
     vim.command(":new")
+    vim.command(":setlocal noswapfile")
     vim.command(":setlocal buftype=nofile")
+    vim.command(":setlocal nobuflisted")
+    vim.command(":setlocal cursorline")
     vim.command(":setlocal filetype=markdown")
     vim.command(":setlocal bufhidden=hide")
-    vim.command(":setlocal noswapfile")
     vim.command(":only")
 
     header_line = '#'
@@ -266,9 +269,9 @@ def IndexData(fname=None):
 
     else:
         root = vim.eval('g:markdownIR_content_root')
-        for fname in os.listdir(root):
-            if not fname.endswith('.' + vim.eval('g:markdownIR_file_suffix')):
-                continue
+        globPattern = '{}/**/*.{}'.format(root, vim.eval('g:markdownIR_file_suffix'))
+        for fname in glob.iglob(globPattern, recursive=True):
+            print("Indexing file %s" % fname)
             try:
                 index_md_file(join(root, fname), termgenerator, db)
             except Exception as e:
