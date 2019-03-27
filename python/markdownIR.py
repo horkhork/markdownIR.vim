@@ -271,7 +271,6 @@ def IndexData(fname=None):
         root = vim.eval('g:markdownIR_content_root')
         globPattern = '{}/**/*.{}'.format(root, vim.eval('g:markdownIR_file_suffix'))
         for fname in glob.iglob(globPattern, recursive=True):
-            print("Indexing file %s" % fname)
             try:
                 index_md_file(join(root, fname), termgenerator, db)
             except Exception as e:
