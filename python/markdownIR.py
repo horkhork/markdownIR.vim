@@ -50,13 +50,29 @@ def NewEntry():
     now = timezone.localize(datetime.datetime.now())
     nowStr = now.strftime(vim.eval('g:markdownIR_file_pattern'))
 
+    vim.command('call inputsave()')
+    vim.command("let title = input('Title: ')")
+    vim.command('call inputrestore()')
+    title = vim.eval('title')
+    origTitle = title
+    title = re.sub("[^A-Za-z0-9._ -]", "", title)
+    title = re.sub(" ", "-", title)
+    title = title[:30]
+    while title.endswith(('-', '.', '_')):
+        title = title[:-1]
+
+    root = nowStr
+    if title:
+        root += '-{}'.format(title)
+
     filename = "index" + "." + vim.eval('g:markdownIR_file_suffix')
-    filepath = os.path.join(vim.eval('g:markdownIR_content_root'), nowStr, filename)
+    filepath = os.path.join(vim.eval('g:markdownIR_content_root'), root, filename)
     os.mkdir(os.path.dirname(filepath))
 
     args = {
         "author": vim.eval('g:markdownIR_default_author'),
         "date": nowStr,
+        "title": origTitle,
     }
 
     # Open the new file according to filename template
@@ -81,9 +97,7 @@ class DisplayItem(object):
         return self.date < other.date
 
     def __repr__(self):
-        ret = "[{} {:<10} {} {} {}]({})".format(
-            self.date.strftime("%d"),
-            self.date.strftime("%A"),
+        ret = "[{} {} {}]({})".format(
             self.date.strftime("%H:%M"),
             self.title,
             ','.join(self.tags),
@@ -220,12 +234,11 @@ def DisplayResultsByDate(enquire):
     for y in data:
         vim.current.buffer.append(str(y))
         for m in data[y]:
-            #vim.current.buffer.append("  " + str(m))
             vim.current.buffer.append(str(m))
             for d in data[y][m]:
+                vim.current.buffer.append(dateutil.parser.parse("{} {} {}".format(y, m, d)).strftime("%A %d"))
                 for i in sorted(data[y][m][d], reverse=True):
                     try:
-                        #vim.current.buffer.append("    " + str(i))
                         vim.current.buffer.append(str(i))
                     except:
                         print("Exception handling %s", str(i))
