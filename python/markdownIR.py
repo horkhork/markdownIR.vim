@@ -299,7 +299,7 @@ def index_md_file(fname, termgenerator, db):
             'markdown+yaml_metadata_block', '--atx-headers', '--template',
             METADATA_TMPL, fname]
     mdata = subprocess.check_output(cmd)
-    metadata = yaml.load(mdata.strip().strip(b"---"))
+    metadata = yaml.load(mdata.strip().strip(b"---"), Loader=yaml.SafeLoader)
 
     cmd = [PANDOC, '--standalone', '--from', 'markdown+yaml_metadata_block', '--to',
             'markdown+yaml_metadata_block', '--atx-headers', '--template',
