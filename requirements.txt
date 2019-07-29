@@ -1,3 +1,7 @@
 python-dateutil
 pytz
-#brew install --build-from-source xapian --with-python
+pyyaml
+
+#brew install --build-from-source xapian -- --with-python
+#brew upgrade xapian
+#brew install pandoc

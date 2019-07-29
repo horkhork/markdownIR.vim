@@ -37,7 +37,7 @@ from collections import OrderedDict
 #  - File suffix
 #  -
 
-PANDOC = '/usr/bin/pandoc'
+PANDOC = vim.eval('g:markdownIR_pandoc_bin')
 PLUGIN_ROOT_DIR = vim.eval('s:plugin_root_dir')
 TEMPLATE_DIR = normpath(join(PLUGIN_ROOT_DIR, '..', 'template'))
 METADATA_TMPL = join(TEMPLATE_DIR, 'metadata_template.pandoc')

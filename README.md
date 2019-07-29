@@ -20,8 +20,13 @@ Following <https://xapian.org/download>
 
 ```
 # On Mac
-brew install --build-from-source xapian --with-python
+brew install --build-from-source xapian -- --with-python
+brew upgrade xapian
 ```
+
+### Instal pandoc
+
+`brew install pandoc`
 
 ## Installation
 
