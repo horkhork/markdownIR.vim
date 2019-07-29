@@ -1,4 +1,4 @@
-# markdown-ir.vim
+# markdownIR.vim
 
 A Markdown Information Retrieval index/query vim plugin for helping to author
 and curate Markdown content.
