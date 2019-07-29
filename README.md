@@ -9,7 +9,20 @@ desired features.
 This uses Xapian 1.4 to index and query your markdown data files.
 
 ## Requirements
-TODO
+
+### Install python-dateutils and pytz
+
+`pip3 install -r path/to/requirements.txt`
+
+### Install Xapian library
+
+Following <https://xapian.org/download>
+
+```
+# On Mac
+brew install --build-from-source xapian --with-python
+```
 
 ## Installation
-TODO
+
+Use Plug
