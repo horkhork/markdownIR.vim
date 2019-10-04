@@ -95,7 +95,7 @@ class DisplayItem(object):
         return self.date < other.date
 
     def __repr__(self):
-        ret = "[{} {} {}]({})".format(
+        ret = "[{} {} <{}>]({})".format(
             self.date.strftime("%H:%M"),
             self.title,
             ','.join(self.tags),
@@ -107,7 +107,7 @@ class DisplayItemDetailedTime(DisplayItem):
         super().__init__(*args, **kwds)
 
     def __repr__(self):
-        ret = "[{} {} {}]({})".format(
+        ret = "[{} {} <{}>]({})".format(
             self.date.strftime("%c"),
             self.title,
             ','.join(self.tags),
