@@ -29,7 +29,7 @@ import vim
 import xapian
 import yaml
 from os.path import normpath, join
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 # Config parameters
 #  - Markdown root path
@@ -43,6 +43,18 @@ TEMPLATE_DIR = normpath(join(PLUGIN_ROOT_DIR, '..', 'template'))
 METADATA_TMPL = join(TEMPLATE_DIR, 'metadata_template.pandoc')
 BODY_TMPL = join(TEMPLATE_DIR, 'body_template.pandoc')
 
+def get_valid_filename(s):
+    """
+    Return the given string converted to a string that can be used for a clean
+    filename. Remove leading and trailing spaces; convert other spaces to
+    underscores; and remove anything that is not an alphanumeric, dash,
+    underscore, or dot.
+    >>> get_valid_filename("john's portrait in 2004.jpg")
+    'johns_portrait_in_2004.jpg'
+    """
+    s = str(s).strip().replace(' ', '_')
+    return re.sub(r'(?u)[^-\w.]', '', s)[:50]
+
 def NewEntry():
     ''' Create a new Markdown file prepopulated from a template '''
 
@@ -54,29 +66,15 @@ def NewEntry():
     vim.command("let title = input('Title: ')")
     vim.command('call inputrestore()')
     title = vim.eval('title')
-    origTitle = title
-    title = re.sub("[^A-Za-z0-9._ -]", "", title)
-    title = re.sub(" ", "-", title)
-    title = title[:30]
-    while title.endswith(('-', '.', '_')):
-        title = title[:-1]
-
-    root = nowStr
-    if title:
-        root += '-{}'.format(title)
-
-    filename = "index" + "." + vim.eval('g:markdownIR_file_suffix')
-    filepath = os.path.join(vim.eval('g:markdownIR_content_root'), root, filename)
-    os.mkdir(os.path.dirname(filepath))
-
+    filename = get_valid_filename(title) + "." + vim.eval('g:markdownIR_file_suffix')
     args = {
         "author": vim.eval('g:markdownIR_default_author'),
         "date": nowStr,
-        "title": origTitle,
+        "title": title,
     }
 
     # Open the new file according to filename template
-    vim.command(":edit {}".format(filepath))
+    vim.command(":edit {}".format(os.path.join(vim.eval('g:markdownIR_content_root'), filename)))
 
     # Substitute parameters into the template
     for k, v in args.items():
