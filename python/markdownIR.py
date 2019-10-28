@@ -361,3 +361,62 @@ def index_md_file(fname, termgenerator, db):
     idterm = u"Q" + date
     doc.add_boolean_term(idterm)
     db.replace_document(idterm, doc)
+
+def GetTags(): #query=None, tags=[], offset=0, pagesize=100000):
+    vim.command('call inputsave()')
+    vim.command("let query = input('Query string: ')")
+    vim.command('call inputrestore()')
+    query = vim.eval('query')
+
+    # Query the Xapian DB and generate an Index page for navigation
+    dbPath = vim.eval('g:markdownIR_db')
+
+    # Open the database we're going to search.
+    db = xapian.Database(dbPath)
+
+    # Set up a QueryParser with a stemmer and suitable prefixes
+    queryparser = xapian.QueryParser()
+    queryparser.set_stemmer(xapian.Stem("en"))
+    queryparser.set_stemming_strategy(queryparser.STEM_SOME)
+
+    # Start of prefix configuration.
+    #queryparser.add_prefix("title", "S")
+    #queryparser.add_prefix("description", "XD")
+    queryparser.add_prefix("tag", "K")
+    # End of prefix configuration.
+
+    q = xapian.Query.MatchAll
+    # And parse the query
+    if query != "":
+        q = queryparser.parse_query(query)
+
+    #if tags:
+    #    tag_query = xapian.Query(xapian.Query.OP_OR, ['XM{}'.format(t) for t in tags])
+    #    q = xapian.Query(xapian.Query.OP_FILTER, q, tag_query)
+
+    # Use an Enquire object on the database to run the query
+    enquire = xapian.Enquire(db)
+    enquire.set_query(q)
+
+    vim.command(":new")
+    vim.command(":setlocal noswapfile")
+    vim.command(":setlocal buftype=nofile")
+    vim.command(":setlocal nobuflisted")
+    vim.command(":setlocal cursorline")
+    vim.command(":setlocal filetype=markdown")
+    vim.command(":setlocal bufhidden=hide")
+    vim.command(":only")
+
+    vim.current.buffer[:] = None
+    vim.current.buffer[0] = ("markdownIR tags")
+    vim.current.buffer.append('')
+
+    tags = set()
+    for match in enquire.get_mset(0, 100000):
+        fields = json.loads(match.document.get_data().decode('utf-8'))
+        tags.update(fields.get('tags', []))
+
+    for tag in sorted(tags):
+        vim.current.buffer.append(tag)
+
+    vim.current.buffer.append("")

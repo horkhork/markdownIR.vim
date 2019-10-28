@@ -36,3 +36,9 @@ function! SearchByRelevance()
         python3 markdownIR.SearchByRelevance()
 endfunction
 command! -nargs=0 SearchByRelevance call SearchByRelevance()
+
+" Search Tags
+function! GetTags()
+        python3 markdownIR.GetTags()
+endfunction
+command! -nargs=0 GetTags call GetTags()
